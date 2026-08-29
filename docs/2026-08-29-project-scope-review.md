@@ -235,7 +235,80 @@ environment, release/publish never executed). Everything is **loaded, not fired*
   contract) means writing output assertions against a contract that might change — the rulings
   (owner questions 1-5) are cheap and precede the code.
 
-## Plan (draft v1 — for review)
+## Phase 3 — Adversarial verification (run inline; delegation disabled by owner f:)
+
+Procedure: every load-bearing MEASURED claim re-run or re-derived by the orchestrator; arithmetic
+recomputed; grade honesty checked. Delegated passes for this phase failed on API timeouts, so the
+pass ran in-session against the same sources.
+
+| Claim | Verdict | Evidence for the verdict |
+|---|---|---|
+| G1 help names `AiSheepdog.dll` | REPRODUCED | orchestrator re-run, identical output; fix API `CommandAppSettings.ApplicationName` + `CommandAppSettings` confirmed present in pinned Spectre.Console.Cli 0.55.0 (DLL byte probe) |
+| G2 flag matrix (`--bogus`/`--version`/`--bogus extraarg`/`frobnicate`) | REPRODUCED | orchestrator re-run: exit 0/0/0/255, stderr 0 bytes |
+| G3 errors on stdout only | REPRODUCED | same re-run |
+| G4 exit 255 no help hint | REPRODUCED | same re-run |
+| G5 help is 4 lines | REPRODUCED | same re-run |
+| G6/G18 suite blind to output (mutation) | REPRODUCED | fresh `git archive 37146e2` copy, both MarkupLine calls deleted → `dotnet test`: total 1, succeeded 1, failed 0 — shipped test stays green |
+| G7 tagline deviates from plan line 36 | REPRODUCED | plan text vs DefaultCommand.cs:12 |
+| G8 sync `Command` base; `AsyncCommand` exists | REPRODUCED | source read + `AsyncCommand`/`ExecuteAsync` present in DLL bytes |
+| G9 publish has no tag linkage check | REPRODUCED | publish.yml:57-60 text; 0 tags/0 releases (gh api) |
+| G10 `production` environment auto-created empty | REPRODUCED | `gh api .../environments` → `[]` |
+| G11 release skip suppresses release creation | REPRODUCED | release.yml:48,55 text |
+| G12 no branch protection on main | REPRODUCED | `gh api .../branches/main/protection` → 404 "Branch not protected" |
+| G13 floating `ubuntu-latest` | REPRODUCED | yml text, all three workflows |
+| G14 API key as command-line argument | REPRODUCED | publish.yml:60 text |
+| G15 Dependabot disabled | REPRODUCED | `gh api repos/...` → `dependabot_security_updates: disabled` |
+| G16 two-tier CPM + dead Spectre.Console 0.57.2 pin | REPRODUCED | `dotnet list package --include-transitive` → transitive Spectre.Console 0.55.0; NU1010 probe (A2) witnessed failing |
+| G17 no icon / no SourceLink | REPRODUCED | nuspec inspection |
+| G19 version projection untested | REPRODUCED | the one test asserts exit code only |
+| G20 InternalsVisibleTo dead | REPRODUCED | grep: no `internal` in src |
+| G21 five named tests missing | REPRODUCED | behaviors measured this campaign |
+| G22 Ollama package deprecated → OllamaSharp | STANDS on lane's live fetch | NuGet registration deprecation metadata quoted by lane; orchestrator re-fetch blocked by approval gate — provenance note retained |
+| G23 stale `--prerelease` install block | STANDS on lane's live fetch | same basis |
+| G24 "merged into" → "successor" | STANDS on lane's live fetch | MS FAQ quotes verbatim in lane report |
+| G25 no "not evaluated" section | REPRODUCED | docs/research.md structure read in full |
+| G26 prose bundle (a)-(e) | STANDS on lane's live fetches | verbatim source quotes in lane report |
+| G27 .bak diverged from live settings | REPRODUCED | diff: live has 17 lines the .bak lacks |
+| G28 42 committed symlinks | REPRODUCED | `git ls-files -s \| grep -c 120000` → 42 |
+| Header arithmetic | CORRECTED during assembly | first written 22/5/1 grades + 10 LOW/4 NIT; recomputed → 24 MEASURED / 4 READ / 0 INFERRED, 11 LOW / 3 NIT; header fixed before publication; recounted post-fix: matches |
+| Provenance honesty note (G22/G23) | ACCURATE | the block is real; finding strengths stated correctly |
+| Healthy/disproven section | SPOT RE-DERIVED | ValidateVersionFile RED witnessed; nupkg internals inspected; `ApplicationName` fix feasibility confirmed; remaining rows ride on lanes' MEASURED probes with commands quoted |
+
+**Result: 0 claims refuted, 0 softened; 23 reproduced by the orchestrator, 5 standing on the
+research lane's cited live fetches; 1 self-caught arithmetic correction (already applied). The
+record's core conclusions survive adversarial re-derivation.**
+
+## Plan revision v2 — what the two plan reviews changed
+
+Both reviews ran inline (same f: constraint). Architect pass verdict: REVISE — edits below applied.
+Gate-audit verdict: GATE-HONEST-AFTER-EDITS — edits below applied.
+
+1. **MUST — coverage hole closed:** G17 (package icon / SourceLink) was in no work package; added
+   to WP3 (build/packaging surface).
+2. **MUST — WP1 gate made executable:** "tests written FIRST watched red" was only true for tests
+   pinning defect behavior. Reworded to the mutation-witnessed pattern: (a) witnessed RED already
+   exists (mutation: prints deleted → shipped test green — reproduced twice this campaign);
+   (b) land the IAnsiConsole seam; (c) add output tests (green); (d) re-run the mutation → must go
+   RED. Strict-contract tests (unknown flag, if ruled strict) are watched red pre-fix as before.
+3. **SHOULD — WP2 gate de-theatred:** scratch-workflow dry-run replaced by testing the linkage-check
+   logic as a local script against `gh api`: RED against a tagless VERSION, GREEN once v0.1.0 is
+   tagged. The workflow wrapper stays actionlint-gated; first real dispatch remains declared
+   residual risk (UNVERIFIED until then).
+4. **SHOULD — WP4 gate concretized:** "re-verified at edit time" now requires a citation table
+   appended to docs/research.md (claim → source → checked date) as the checkable artifact.
+5. **SHOULD — WP5 given minimal gates:** absence grep for the .bak path; badge URL returns 200;
+   dependabot config validated after push.
+6. **SHOULD — WP1 unblocked:** seam work (G6, G1, G8, G20) is ruling-independent and starts
+   immediately; only the flag-contract and stderr tests wait on rulings 1/4. The calibration's
+   sequencing constraint is honored by test placement, not by blocking the whole package.
+7. **SHOULD — execution shape fixed:** all five WPs run sequentially in one session on the campaign
+   branch, one commit per WP — builds take 1.5s, worktree isolation buys nothing at this size, and
+   delegation is disabled. No shared files between WPs (verified by walking each WP's file set);
+   the only serialization point is the branch itself.
+8. Deferral accepted by both reviews: module before/after diagrams stay deferred (20 lines, no
+   structural change proposed); voice (G7) is a ruling, its 1-line edit (if reverted) belongs to WP1.
+
+## Plan (v2 — reviewed)
 
 Work packages grouped by surface; everything touching one file lands in one package. Each names its
 gate, all of which must be watched red before trusted. Rulings marked ⏸ are owner questions the
@@ -243,18 +316,17 @@ implementation may not start ahead of; defaults below are the recorded recommend
 reversible.
 
 **WP1 — CLI contract & output seam** (DefaultCommand.cs, Program.cs, DefaultCommandTests.cs)
-- Rulings first (cheap, precede code): ⏸ flag contract (rec: strict unknown-option rejection +
-  explicit `--version` flag), ⏸ stderr/exit-code shape (rec: errors→stderr, keep 255), ⏸ voice (rec:
-  keep tagline), ⏸ async base (rec: switch to `AsyncCommand` now), ⏸ help naming (rec:
-  ApplicationName="sheepdog").
-- Then one change: IAnsiConsole constructor injection (G6), ApplicationName (G1), flag contract per
-  ruling (G2), stderr routing (G3), `[Description]` (G5), banner format (G19), delete
-  InternalsVisibleTo (G20), the five named tests (G21, Q6).
-- Gate: the exact-output banner test and the unknown-flag test are written FIRST against current
-  behavior where they pin a defect (watched red), and against ruled behavior after the ruling; the
-  mutation that Q1 used (delete both MarkupLine calls) must turn the new suite red. Also: run the
-  CLI, hex-check stderr emptiness flipped to carry errors.
-- Explicitly deferred from WP1: G7 (voice) — one string, decided by ruling, no code risk.
+- Ruling-independent seam work starts immediately: IAnsiConsole constructor injection (G6),
+  ApplicationName="sheepdog" (G1), switch to `AsyncCommand` (G8), delete InternalsVisibleTo (G20).
+- Waits on rulings: flag contract (rec: strict unknown-option rejection + explicit `--version`),
+  stderr/exit-code shape (rec: errors→stderr, keep 255), voice (rec: keep tagline).
+- Then: flag contract per ruling (G2), stderr routing (G3), `[Description]` (G5), banner format
+  (G19), the five named tests (G21, Q6).
+- Gate (mutation-witnessed pattern): witnessed RED already exists — the mutation (both MarkupLine
+  calls deleted, shipped test stays green) was reproduced twice this campaign. Sequence: land the
+  seam → add the output tests (green) → re-run the mutation → the new suite must go RED.
+  Strict-contract tests (unknown flag, if ruled strict) are written against current behavior first
+  and watched red pre-fix. Run the CLI; hex-verify stderr now carries errors.
 
 **WP2 — Release/publish hardening** (.github/workflows/publish.yml, release.yml)
 - Rulings: ⏸ none — these are the plan's own recommendations, recorded and reversible.
@@ -262,34 +334,40 @@ reversible.
   api-key via env: indirection + `xargs -r` (G14), ⏸ pin publish runner to ubuntu-24.04 (G13, rec:
   yes), ⏸ pre-create `production` environment with required reviewer (G10 — repo-settings action,
   not a file change).
-- Gate: workflow runs cannot be red-tested locally — the gate is actionlint + a dry-run of the
-  linkage-check step logic in a scratch workflow on a branch, watched failing against a tagless
-  VERSION and passing against v0.1.0 after the first release exists. (First real execution remains
-  the publish dispatch itself; recorded as residual risk.)
+- Gate: the linkage-check logic is tested as a local script against `gh api` — watched RED against a
+  tagless VERSION, GREEN once v0.1.0 is tagged. Workflow wrapper stays actionlint-gated; the first
+  real dispatch is declared residual risk and stays UNVERIFIED until it runs.
 
-**WP3 — Build/CPM simplification** (Directory.Packages.props, tests/Directory.Packages.props → merged)
+**WP3 — Build/CPM simplification** (Directory.Packages.props, tests/Directory.Packages.props → merged; AiSheepdog.csproj)
 - One root props file, two labeled ItemGroups (G16); delete the dead Spectre.Console 0.57.2 pin or
-  transitive-pin deliberately (G16, second half).
-- Gate: A2's NU1010 probe in reverse — after the merge, a scratch test referencing a root-defined
-  package resolves; the existing suite stays green; `dotnet list package --include-transitive` shows
-  the intended Spectre.Console resolution.
+  transitive-pin deliberately (G16, second half); add PackageIcon + deterministic-build/SourceLink
+  metadata (G17 — folded in by plan review 1).
+- Gate: the NU1010 probe in reverse — after the merge, a scratch test referencing a root-defined
+  package resolves (watched: it fails NU1010 against the current two-tier shape); the existing suite
+  stays green; `dotnet list package --include-transitive` shows the intended Spectre.Console
+  resolution; the packed nuspec carries the icon reference.
 
 **WP4 — Research record correction** (docs/research.md)
 - OllamaSharp replacement (G22), install block date-stamp/correction (G23), "successor" wording
   (G24), prose bundle G26 (a)-(e) + roster citation, new "Not evaluated" section (G25).
-- Gate: every changed claim re-verified against its source at edit time; the section names AF-vs-own
-  -harness trade-offs explicitly and marks vendor claims "per vendor".
+- Gate: a citation table appended to docs/research.md (claim → source URL → checked date) is the
+  checkable artifact; every changed claim re-verified against its source at edit time; the "Not
+  evaluated" section names AF-vs-own-harness trade-offs explicitly and marks vendor claims "per
+  vendor".
 
 **WP5 — Hygiene batch** (.claude/settings.json.bak → delete; README badge per ⏸ S7 ruling rec: build
 badge now, NuGet badge at first publish; ⏸ G28 symlink shape rec: accept, revisit if Windows users
 appear; G15 Dependabot rec: enable; G12 branch protection rec: leave, solo repo, revisit at first
-external contributor).
+external contributor)
+- Gate (minimal, per gate audit): absence grep for the .bak path; badge URL returns 200; dependabot
+  config validated after push.
 
-**Sequencing.** WP4 is independent — can run any time, first if the architecture decision is imminent
-(the P0 harness work reads this doc). WP1 waits on its rulings (owner questions 1-5); WP2/WP3/WP5 have
-no blocking rulings except their marked ones. No two packages share a file. Serialisation point: none
-— all five touch disjoint file sets. Version marker: no bump (nothing released; VERSION stays 0.1.0
-until the first real release).
+**Sequencing (v2).** All five WPs run sequentially in one session on the campaign branch, one commit
+per WP — builds take 1.5s, worktree isolation buys nothing at this size, and delegation is disabled
+(owner f:). No two packages share a file (verified by walking each WP's file set); the only
+serialization point is the branch itself. WP4 is independent and can run first if the architecture
+decision is imminent. Version marker: no bump (nothing released; VERSION stays 0.1.0 until the first
+real release).
 
 **Module before/after.** At 20 production lines the module shape does not change: single project,
 one command. The only structural movement is inside DefaultCommand (sync→async base, static→injected
