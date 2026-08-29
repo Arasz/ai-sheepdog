@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   pack:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
       DOTNET_CLI_TELEMETRY_OPTOUT: true
@@ -23,6 +23,10 @@ jobs:
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
           global-json-file: global.json
+      - name: Verify VERSION is tagged and released
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: scripts/verify-publish-version.sh
       - name: Pack
         run: dotnet pack src/AiSheepdog/AiSheepdog.csproj -c Release -o artifacts --nologo
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
@@ -32,7 +36,7 @@ jobs:
 
   publish:
     needs: pack
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     environment: production
     permissions:
@@ -55,6 +59,8 @@ jobs:
         with:
           user: Arasz
       - name: Push to nuget.org
+        env:
+          NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
         run: |
           find artifacts -type f -name '*.nupkg' -print0 \
-            | xargs -0 -n1 dotnet nuget push --api-key ${{ steps.login.outputs.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+            | xargs -0 -r -n1 dotnet nuget push --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate

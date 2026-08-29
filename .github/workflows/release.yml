@@ -38,21 +38,34 @@ jobs:
         run: |
           set -euo pipefail
           if git ls-remote --exit-code --tags origin "refs/tags/${{ steps.version.outputs.tag }}" >/dev/null 2>&1; then
-            echo "exists=true" >> "$GITHUB_OUTPUT"
-            echo "Tag ${{ steps.version.outputs.tag }} already exists; skipping."
+            echo "tag-exists=true" >> "$GITHUB_OUTPUT"
+            echo "Tag ${{ steps.version.outputs.tag }} already exists; skipping tagging."
           else
-            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "tag-exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check whether the release already exists
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if gh release view "${{ steps.version.outputs.tag }}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            echo "release-exists=true" >> "$GITHUB_OUTPUT"
+            echo "Release ${{ steps.version.outputs.tag }} already exists; skipping release creation."
+          else
+            echo "release-exists=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Create and push the tag
-        if: steps.check.outputs.exists != 'true'
+        if: steps.check.outputs.tag-exists != 'true'
         run: |
           set -euo pipefail
           git tag "${{ steps.version.outputs.tag }}"
           git push origin "${{ steps.version.outputs.tag }}"
 
       - name: Create the GitHub release
-        if: steps.check.outputs.exists != 'true'
+        if: steps.release.outputs.release-exists != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release create "${{ steps.version.outputs.tag }}" --title "${{ steps.version.outputs.tag }}" --generate-notes
