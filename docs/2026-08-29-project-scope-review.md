@@ -317,11 +317,13 @@ reversible.
 
 **WP1 — CLI contract & output seam** (DefaultCommand.cs, Program.cs, DefaultCommandTests.cs)
 - Ruling-independent seam work starts immediately: IAnsiConsole constructor injection (G6),
-  ApplicationName="sheepdog" (G1), switch to `AsyncCommand` (G8), delete InternalsVisibleTo (G20).
-- Waits on rulings: flag contract (rec: strict unknown-option rejection + explicit `--version`),
-  stderr/exit-code shape (rec: errors→stderr, keep 255), voice (rec: keep tagline).
-- Then: flag contract per ruling (G2), stderr routing (G3), `[Description]` (G5), banner format
-  (G19), the five named tests (G21, Q6).
+  ApplicationName="ai-sheepdog" (G1, D3 — owner note: app name is ai-sheepdog; the installed
+  command stays `sheepdog`), switch to `AsyncCommand` (G8), delete InternalsVisibleTo (G20).
+- Waits on rulings: none remaining — D1/D4 closed 14/14 APPROVE (strict flag contract; errors to
+  stderr **and** through a logger, D4 note).
+- Then: flag contract per D1 (G2), stderr routing + logging seam per D4 (G3; [LoggerMessage]
+  pattern when the logging package lands), `[Description]` (G5), banner format (G19), the five
+  named tests (G21, Q6).
 - Gate (mutation-witnessed pattern): witnessed RED already exists — the mutation (both MarkupLine
   calls deleted, shipped test stays green) was reproduced twice this campaign. Sequence: land the
   seam → add the output tests (green) → re-run the mutation → the new suite must go RED.
@@ -339,9 +341,10 @@ reversible.
   real dispatch is declared residual risk and stays UNVERIFIED until it runs.
 
 **WP3 — Build/CPM simplification** (Directory.Packages.props, tests/Directory.Packages.props → merged; AiSheepdog.csproj)
-- One root props file, two labeled ItemGroups (G16); delete the dead Spectre.Console 0.57.2 pin or
-  transitive-pin deliberately (G16, second half); add PackageIcon + deterministic-build/SourceLink
-  metadata (G17 — folded in by plan review 1).
+- One root props file, two labeled ItemGroups (G16) — the test group carries only packages used by
+  tests (D7 note); delete the dead Spectre.Console 0.57.2 pin or transitive-pin deliberately (G16,
+  second half); add PackageIcon + deterministic-build/SourceLink metadata (G17 — folded in by plan
+  review 1).
 - Gate: the NU1010 probe in reverse — after the merge, a scratch test referencing a root-defined
   package resolves (watched: it fails NU1010 against the current two-tier shape); the existing suite
   stays green; `dotnet list package --include-transitive` shows the intended Spectre.Console
@@ -373,3 +376,25 @@ real release).
 one command. The only structural movement is inside DefaultCommand (sync→async base, static→injected
 console) and the props merge. Drawings deferred to implementation; no architectural restructure is
 proposed — G6's injection is the seam that will let the harness's future output be tested at all.
+
+## Owner gate — CLOSED 2026-08-29, 14/14 APPROVE
+
+Form: docs/work/2026-08-29-project-scope-review.html · feedback: docs/work/2026-08-29-project-scope-review-feedback.md
+(end marker verified, nothing unanswered). Rulings and what each changes:
+
+| ID | Verdict | Note | Consequence |
+|---|---|---|---|
+| D1 | APPROVE | — | strict unknown-option rejection + explicit `--version` into WP1 |
+| D2 | APPROVE | — | IAnsiConsole constructor injection into WP1 |
+| D3 | APPROVE | "App name is ai-sheepdog" | **amended**: ApplicationName = "ai-sheepdog"; installed command stays `sheepdog` (plan-ruled ToolCommandName) — help shows the package name |
+| D4 | APPROVE | "also we will use the logger for errors" | **extended**: errors → stderr **and** through a logging seam in WP1 ([LoggerMessage] pattern when the logging package lands) |
+| D5 | APPROVE | — | AsyncCommand base into WP1 |
+| D6 | APPROVE | — | sheep tagline stays |
+| D7 | APPROVE | "in tests — only packages used by tests" | **constraint**: merged CPM's test group carries only test-used packages |
+| D8 | APPROVE | — | build badge now, NuGet badge at first publish |
+| D9 | APPROVE | — | 3-line README acceptable at first publish; PackageIcon/SourceLink with WP3 |
+| D10 | APPROVE | — | delete .bak; accept symlinks |
+| D11 | APPROVE | — | publish runner pinned ubuntu-24.04; Dependabot on; branch protection stays off |
+| D12 | APPROVE | — | publish tag-linkage check; pre-create `production` environment with required reviewer |
+| D13 | APPROVE | — | release-existence check separate from tag check |
+| D14 | APPROVE | — | research.md corrections + Not-evaluated section before P0 harness work — **corrections verified against current Microsoft Learn docs 2026-08-29**: IChatClient seam verbatim (learn.microsoft.com/dotnet/ai/microsoft-extensions-ai); Ollama quickstart instructs `dotnet add package OllamaSharp` with `new OllamaApiClient(...)` as IChatClient and never mentions the deprecated package; AF overview verbatim: "The Agent Framework is the direct successor, created by the same teams". SK-v1.x-support wording stands on the lane's devblogs FAQ fetch (SK Learn page renders no strippable body text). |
