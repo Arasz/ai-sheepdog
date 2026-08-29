@@ -8,6 +8,7 @@
         <PackageId>ai-sheepdog</PackageId>
         <ToolCommandName>sheepdog</ToolCommandName>
         <PackageReadmeFile>README.md</PackageReadmeFile>
+        <PackageIcon>icon.png</PackageIcon>
         <PackageTags>ai agent agents harness llm cli tool dotnet-tool dotnet</PackageTags>
         <PackageReleaseNotes>https://github.com/Arasz/ai-sheepdog/releases</PackageReleaseNotes>
         <Authors>Rafał Araszkiewicz</Authors>
@@ -17,14 +18,20 @@
         <RepositoryUrl>https://github.com/Arasz/ai-sheepdog</RepositoryUrl>
         <RepositoryType>git</RepositoryType>
         <Description>A minimal LLM agent harness, distributed as a dotnet tool. Work in progress.</Description>
+        <PublishRepositoryUrl>true</PublishRepositoryUrl>
+        <EmbedUntrackedSources>true</EmbedUntrackedSources>
+        <Deterministic>true</Deterministic>
+        <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
     </PropertyGroup>
 
     <ItemGroup>
         <None Include="..\..\README.md" Pack="true" PackagePath="/"/>
+        <None Include="..\..\icon.png" Pack="true" PackagePath="/"/>
     </ItemGroup>
 
     <ItemGroup>
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" NoWarn="NU1507"/>
+        <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="all" NoWarn="NU1507"/>
         <PackageReference Include="Spectre.Console.Cli"/>
     </ItemGroup>
 
