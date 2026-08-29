@@ -1,5 +1,3 @@
 using AiSheepdog;
-using Spectre.Console.Cli;
 
-var app = new CommandApp<DefaultCommand>();
-return app.Run(args);
+return DefaultCommand.MainInternal(args, Console.Out, Console.Error, null);
