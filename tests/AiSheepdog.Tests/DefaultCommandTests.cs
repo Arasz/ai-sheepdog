@@ -79,7 +79,9 @@ public sealed class DefaultCommandTests
         var exit = DefaultCommand.MainInternal([], stdout, stderr, null);
 
         exit.ShouldBe(0);
-        stdout.ToString().ShouldContain($"ai-sheepdog {ExpectedVersion()}");
+        var clean = System.Text.RegularExpressions.Regex.Replace(stdout.ToString(), "\x1b\\[[0-9;]*m", string.Empty);
+        clean.ShouldContain($"ai-sheepdog {ExpectedVersion()}");
+        clean.ShouldContain("Work in progress. The sheep are not being herded yet.");
         stderr.ToString().ShouldBeEmpty();
     }
 
