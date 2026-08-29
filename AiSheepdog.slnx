@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/AiSheepdog/AiSheepdog.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/AiSheepdog.Tests/AiSheepdog.Tests.csproj" />
+  </Folder>
+</Solution>

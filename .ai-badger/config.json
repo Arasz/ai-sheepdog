@@ -1,0 +1,54 @@
+{
+  "$schema": "./schemas/config.schema.json",
+  "frameworkVersion": "0.143.0",
+  "project": {
+    "name": "ai-sheepdog",
+    "summary": "C# .NET 10 CLI agent harness distributed as a dotnet tool: agent loop, tool registry, and provider-agnostic LLM access via Microsoft.Extensions.AI IChatClient.",
+    "domain": "A minimal LLM agent harness — the software layer that turns a language model into a working agent: orchestration loop, tool execution, context management, and state."
+  },
+  "stacks": [
+    "dotnet",
+    "github",
+    "ts",
+    "node"
+  ],
+  "agents": [
+    "claude",
+    "copilot",
+    "hermes",
+    "pi"
+  ],
+  "sourceControl": {
+    "platform": "github",
+    "repoUrl": "https://github.com/Arasz/ai-sheepdog",
+    "projectUrl": null
+  },
+  "commands": {
+    "build": "dotnet build",
+    "test": "dotnet test"
+  },
+  "personaRouting": [
+    {
+      "work": "architecture, design decisions, project structure",
+      "agent": "architect"
+    },
+    {
+      "work": "tests, test strategy, test coverage",
+      "agent": "test-engineer"
+    },
+    {
+      "work": "code review, quality gates, PR review",
+      "agent": "code-reviewer"
+    },
+    {
+      "work": "C#/.NET implementation, CLI, tool packaging",
+      "agent": "dotnet-engineer"
+    }
+  ],
+  "skillScope": "default",
+  "docs": {},
+  "agentDocs": {
+    "maxChars": 17000,
+    "maxLines": 280
+  }
+}
