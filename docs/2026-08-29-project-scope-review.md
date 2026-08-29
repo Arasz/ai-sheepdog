@@ -399,33 +399,20 @@ Form: docs/work/2026-08-29-project-scope-review.html · feedback: docs/work/2026
 | D13 | APPROVE | — | release-existence check separate from tag check |
 | D14 | APPROVE | — | research.md corrections + Not-evaluated section before P0 harness work — **corrections verified against current Microsoft Learn docs 2026-08-29**: IChatClient seam verbatim (learn.microsoft.com/dotnet/ai/microsoft-extensions-ai); Ollama quickstart instructs `dotnet add package OllamaSharp` with `new OllamaApiClient(...)` as IChatClient and never mentions the deprecated package; AF overview verbatim: "The Agent Framework is the direct successor, created by the same teams". SK-v1.x-support wording stands on the lane's devblogs FAQ fetch (SK Learn page renders no strippable body text). |
 
-## Follow-up — workflow trigger gap (diagnosed 2026-08-29, unresolved)
+## Follow-up — workflow trigger gap (RESOLVED 2026-08-29 ~14:35 UTC+2)
 
-**Finding:** build.yml has never fired from a `push` or `pull_request` event on this repo — 0 such
-runs in the full history, including the bootstrap push. Only `workflow_dispatch` works (3/3). Merges
-of #1, #2, #3 all landed without a build run; the red main incident (#3's failure) was caught by a
-manual dispatch, not CI.
+**Finding:** build.yml never fired from a `push` or `pull_request` event on this repo — 0 such runs
+in history including the bootstrap push; only `workflow_dispatch` worked. Merges #1/#2/#3 landed
+without a build run; the red-main incident was caught by manual dispatch, not CI.
 
-**Eliminated (each verified against the live API):** workflow state `active` + re-enabled + file
-touched + re-pushed; triggers parse correctly (`push: branches [main]`, PR types); Actions
-permissions `enabled/all` (read back and rewritten via API); auth path (SSH and HTTPS pushes both
-suppressed); GitHub status (Actions operational); account scope (a push to ai-badger fired Actions
-minutes earlier); deploy keys (none on the repo; user-key auth confirmed).
+**Fix:** an explicit API rewrite of the repo's Actions permissions
+(`PUT /actions/permissions {"enabled":true,"allowed_actions":"all"}`) — after which the very next
+push fired build (and every push since). Eliminated along the way (each verified live): workflow
+state/registration, trigger parsing, auth path (SSH vs HTTPS), deploy keys, GitHub status, account
+scope (ai-badger fired fine throughout). Evidence shape during the outage: PushEvent arrived and
+other apps' check suites (vercel, claude) were created — the Actions app's never was. Stale PR
+events never retro-fired; only events after the rewrite trigger.
 
-**Evidence shape:** the PushEvent reaches the repo (events feed), and check suites ARE created for
-other apps (vercel, claude — queued) — but no Actions check suite is ever created. Selective
-server-side suppression of the Actions app's automatic triggers on this one repo; every
-API-visible switch says on.
-
-**Standing test case:** PR #7 (`ci/trigger-probe`) — after any change, it should sprout a build
-check on its own.
-
-**Manual unblock (owner):** Settings → Actions → General → Disable actions → Save → re-enable
-(forces service re-registration beyond what the API reaches); if that fails, GitHub support with
-"automatic workflow triggers suppressed, dispatch works, other apps fine."
-
-**Interim discipline until fixed:** `gh workflow run build.yml --ref <branch>` per branch, watch
-the conclusion, only then merge. (This discipline caught the one real red main so far.)
-
-Probe artifacts left on main: two empty `ci probe` commits and a trailing comment line in
-build.yml — harmless, revert at will.
+**Verified post-fix:** push → 2/2 runs green (incl. the merge of #7); fresh PR #8 → its own
+pull_request run green (1 check on the rollup). PR #8 is left open as the standing evidence.
+Interim dispatch-per-branch discipline is retired.
