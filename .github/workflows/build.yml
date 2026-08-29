@@ -30,3 +30,5 @@ jobs:
         run: dotnet build --nologo
       - name: Test
         run: dotnet test --no-build -v m
+
+# trigger re-registration probe 2026-08-29
