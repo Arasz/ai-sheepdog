@@ -35,8 +35,4 @@
         <PackageReference Include="Spectre.Console.Cli"/>
     </ItemGroup>
 
-    <ItemGroup>
-        <InternalsVisibleTo Include="AiSheepdog.Tests"/>
-    </ItemGroup>
-
 </Project>
