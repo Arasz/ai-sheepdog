@@ -4,15 +4,15 @@
         <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
     </PropertyGroup>
     <ItemGroup Label="Application">
-        <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.11"/>
-        <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.400"/>
-        <PackageVersion Include="Spectre.Console.Cli" Version="0.55.0"/>
+        <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.13"/>
+        <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.402"/>
+        <PackageVersion Include="Spectre.Console.Cli" Version="0.57.2"/>
     </ItemGroup>
     <ItemGroup Label="Testing">
-        <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.9.0"/>
+        <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.11.0"/>
         <PackageVersion Include="Shouldly" Version="4.3.0"/>
-        <PackageVersion Include="Spectre.Console.Cli.Testing" Version="0.55.0"/>
-        <PackageVersion Include="xunit.v3" Version="4.0.0"/>
-        <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.0"/>
+        <PackageVersion Include="Spectre.Console.Cli.Testing" Version="0.57.2"/>
+        <PackageVersion Include="xunit.v3" Version="4.0.2"/>
+        <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.1"/>
     </ItemGroup>
 </Project>

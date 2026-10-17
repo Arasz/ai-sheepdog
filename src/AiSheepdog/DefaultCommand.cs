@@ -13,7 +13,7 @@ public sealed partial class DefaultCommand : AsyncCommand
         _console = console;
     }
 
-    protected override Task<int> ExecuteAsync(CommandContext context, CancellationToken cancellationToken)
+    public override Task<int> ExecuteAsync(CommandContext context, CancellationToken cancellationToken)
     {
         _console.MarkupLine($"ai-sheepdog [bold]{VersionString()}[/]");
         _console.MarkupLine("Work in progress. The sheep are not being herded yet.");
