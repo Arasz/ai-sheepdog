@@ -42,6 +42,19 @@ If `index.json` is missing or stale, run `python3 "$AI_BADGER/tooling/index_buil
 
 ## Flow
 
+0. **Is this a collection?** Look at the target's direct subdirectories: a directory that
+   carries a `.git` entry is a repository. When the target holds more than one of them, the
+   operator may want one shared scope over all of them — run the discovery command and ask:
+   ```bash
+   python3 "$AI_BADGER/features/common/skills/welcome-ai-badger/scripts/shared_scope.py" discover \
+     --target . --root "$AI_BADGER"
+   ```
+   It prints one `dir:stacks` line per repository and the union of their stacks, and writes
+   nothing. With the operator's go-ahead, the parent-side path takes over: run
+   `shared_scope.py init --target . --root "$AI_BADGER"` (add `--dry-run` first to show the
+   members, the union and every identity decision without writing) and skip the steps below.
+   With one repository — or when the operator wants them separate — continue as usual.
+
 1. **Detect.** From the target repo root:
    ```bash
    python3 "$AI_BADGER/features/common/skills/welcome-ai-badger/scripts/detect.py" --target . --root "$AI_BADGER" > /tmp/proposed-config.json
@@ -67,6 +80,13 @@ If `index.json` is missing or stale, run `python3 "$AI_BADGER/tooling/index_buil
    (Why — see Gotchas.).
    The declined item is not delivered and its discovery symlinks are removed; the copy already
    under `.ai-badger/skills/` stays on disk for the user to delete.
+
+   Catalog tools (`features/<stack>/tools/`) are never proposed by detection. Add one only
+   when the user asks for it: `{"tools": {"<tool>": {"hooks": ["claude", "copilot"]}}}`
+   names the agents whose hooks route through it. For Claude the hook is ai-badger's guard, which
+   leaves a command a `permissions.ask` rule names unrewritten. The tool binary is checked, and installed only
+   under `--execute`. Removing the entry makes the next scaffold delete the hook files it
+   wrote; for pi it prints the `<tool> init --agent pi --uninstall` command instead.
 
 4. **Validate.**
    ```bash
@@ -196,3 +216,54 @@ exits non-zero or emits an error, attempt recovery before surfacing the failure.
 - [ ] Plugin-setup commands relayed per the chosen scope (default or local-only)
 - [ ] Preserved hand-authored discovery files reported, not overwritten
 - [ ] Any "competing copies" tree list relayed, and nothing outside the target deleted
+
+## Shared parent collections
+
+For a collection with explicit child repositories, use the existing renderer through:
+
+```bash
+python3 "$AI_BADGER/features/common/skills/welcome-ai-badger/scripts/shared_scope.py" collect \
+  --target /path/to/collection --repo python-app --repo dotnet-app --root "$AI_BADGER"
+```
+
+To start from the parent instead — a directory of repositories you did not pick by hand —
+use the discovery and initialization commands:
+
+```bash
+python3 "$AI_BADGER/features/common/skills/welcome-ai-badger/scripts/shared_scope.py" discover \
+  --target /path/to/source --root "$AI_BADGER"
+python3 "$AI_BADGER/features/common/skills/welcome-ai-badger/scripts/shared_scope.py" init \
+  --target /path/to/source --root "$AI_BADGER"
+```
+
+`discover` is read-only: it lists the direct subdirectories that carry a `.git` entry, one
+`dir:stacks` line each, plus the union of their stacks. `init` enrolls every repository it
+finds, one level deep: it decides every identity and every member's own settings before it
+writes anything, scaffolds the parent with the union of the stacks, and materializes every
+member from it. A member with no ai-badger yet is scaffolded; a member that already has one
+is converted, keeping its own project id, its own stacks and its own settings. `--dry-run`
+reports the plan and writes nothing.
+
+Supply `--config /path/to/parent-config.json` to author parent defaults. Collect uses only
+these members, computes their stack union, and materializes every selected child with that
+union. Each child keeps its identity and state. Its private `.ai-badger/shared-scope.json`
+records original local stacks and authored overrides; edit those overrides for persistent
+local settings. Objects merge and lists replace parent values.
+
+To refresh one child with its own stacks, run `shared_scope.py sync --target CHILD --source
+COLLECTION/.ai-badger --root FRAMEWORK`. Ordinary scaffold and den-refresh refuse shared
+children and print the command that restores them — `collect` for a child that carries the
+union, `sync` for one that carries its own stacks.
+
+To remove a member from the collection, run `shared_scope.py prune --target COLLECTION --repo
+CHILD --root FRAMEWORK`: the member keeps its own identity and its shared files as private
+copies, the parent's union shrinks to the remaining members, and the pruned repository
+rejoins the ordinary scaffold and refresh flow. A collection keeps at least one member, so
+the last one cannot be pruned.
+
+A member with no identity of its own is resolved through the canonical ai-raccoon lookup:
+the bank's id for that name is reused, a name the bank does not know gets a local id, and
+an uncertain answer refuses the enrollment before anything is written. Nothing is
+registered with the bank unless `--register` is passed. Verify child instruction and skill discovery,
+then confirm the child's project ID remains its own. Do not replace `.ai-badger` directories
+with symlinks; only the recorded immutable files may share parent copies.

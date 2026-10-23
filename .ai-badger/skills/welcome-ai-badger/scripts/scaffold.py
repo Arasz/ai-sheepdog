@@ -196,12 +196,15 @@ def demote_headings(text: str, levels: int = 2) -> str:
 
 # The shared context, the manifest's generated-config ledger, and the seven collaborators
 from scaffold_context import ScaffoldContext  # noqa: E402
+from adjustment_policy import (build_adjustment_context,
+                               instruction_only_adjustment_context)  # noqa: E402
 from generated_config import GeneratedConfigRecords  # noqa: E402
 from hook_wiring import HookWiring, merge_hooks  # noqa: E402
 from template_rendering import TemplateRendering, invariant_summary  # noqa: E402
 from agent_files import AgentFiles  # noqa: E402
 from extensions import Extensions  # noqa: E402
 from mcp_tools import McpTools  # noqa: E402
+from tool_catalog import ToolCatalog  # noqa: E402
 from statusline_wiring import StatusLineWiring  # noqa: E402
 # relink_hermes_skills is re-exported: den-refresh's refresh.py calls it on this module.
 from skill_delivery import SkillDelivery, prune_namespaces, relink_hermes_skills  # noqa: E402
@@ -278,6 +281,7 @@ class Scaffolder:
         self.superseded = SupersededPrune(self.ctx, self.skill_delivery)
         self.install = install
         self.execute = execute
+        self.tools = ToolCatalog(self.ctx, execute=execute)
         self.commit, self.dirty = git_provenance(root)
         self.entries: List[Dict[str, Any]] = []
         self._completed_steps: List[str] = []
@@ -571,6 +575,7 @@ class Scaffolder:
         # An adjustment is loaded by path: what it cannot resolve itself travels in the context.
         declared_mcp = sorted(self.mcp.split_servers_by_scope(self.mcp.declared_servers())[0])
         selected = self.config.get("agents", [])
+        instruction_only = "limited-env" in self.config.get("stacks", [])
         for agent_name in dict.fromkeys([*selected, *bl.AGENT_NAMES]):
             adj_path = self.root / "features" / agent_name / "adjustments" / "adjustment.json"
             if not adj_path.exists():
@@ -582,7 +587,9 @@ class Scaffolder:
                 continue
 
             for adj in adj_manifest.get("adjustments", []):
-                if agent_name not in selected and not adj.get("cleanupOnDeselection", False):
+                hook_feature = adj.get("feature") in {"hooks", "tools"}
+                if ((agent_name not in selected or (instruction_only and hook_feature))
+                        and not adj.get("cleanupOnDeselection", False)):
                     continue
                 script_name = adj.get("script")
                 if not script_name:
@@ -618,24 +625,22 @@ class Scaffolder:
                                     if any(s in bl.catalog_skills_for_stack(self.root, st)
                                            for st in agent_stacks)]
 
-                    context = {
-                        "framework_root": self.root,
-                        "config": self.config,
-                        "feature_dir": self.root / "features" / agent_name / "adjustments",
-                        "target_dir": self.aib,
-                        "target": self.target,
-                        # --no-install reaches the adjustments: user-global state
-                        # (~/.hermes/plugins) is never written when it is set.
-                        "install": self.install,
-                        "skills": agent_skills,
-                        "prune": self.prune_discovery,
-                        "personas": [item for _stack, item in bl.applicable_feature_items(
-                            self.index, self.config, "personas")],
-                        "index": self.index,
-                        "mcp_servers": declared_mcp,
-                        "mcp_declarations": self.mcp.declarations_for_agent(agent_name),
-                        "mcp_declined": self.mcp.declined_servers(),
-                    }
+                    adjustment_config, adjustment_tools, adjustment_install = (
+                        instruction_only_adjustment_context(
+                            self.config, self.tools.prepare(), self.install,
+                            agent_name, instruction_only and hook_feature,
+                        )
+                    )
+                    personas = [item for _stack, item in bl.applicable_feature_items(
+                        self.index, self.config, "personas")]
+                    context = build_adjustment_context(
+                        self.root, adjustment_config,
+                        self.root / "features" / agent_name / "adjustments",
+                        self.aib, self.target, adjustment_install, agent_skills,
+                        self.prune_discovery, personas, self.index, declared_mcp,
+                        self.mcp.declarations_for_agent(agent_name),
+                        self.mcp.declined_servers(), adjustment_tools,
+                    )
                     result = mod.adjust(context)
                     if result.get("applied"):
                         self.notes.append(
@@ -688,8 +693,13 @@ class Scaffolder:
             self.notes.append(f"{step} failed ({type(exc).__name__}) — skipped; "
                               f"the project scaffold is unaffected")
 
-    def run(self, generated_at: Optional[str] = None) -> Dict[str, Any]:
+    def run(self, generated_at: Optional[str] = None,
+            allow_shared_scope: bool = False) -> Dict[str, Any]:
         """Run every scaffold step in order and return the manifest, plugin commands, and notes."""
+        if not allow_shared_scope:
+            refusal = bl.shared_scope_refusal(self.target)
+            if refusal:
+                raise ValueError(refusal)
         self.aib.mkdir(parents=True, exist_ok=True)
         _project_id, project_id_notes = ensure_project_id(
             self.aib, project_name(self.target), raccoon=self.install)
@@ -718,6 +728,7 @@ class Scaffolder:
         self._record_progress("agent-files")
         self.wire_hooks()
         self.statusline.wire()
+        self.tools.prepare()  # check/install under --execute, before any arm reads check_ok
         self.run_adjustments()
         self._record_progress("hooks")
         plugin_cmds = self.install_plugins()
@@ -734,7 +745,7 @@ class Scaffolder:
         self.copy_engine_and_schemas()
 
         manifest = {
-            "$schema": "../schemas/manifest.schema.json",
+            "$schema": "./schemas/manifest.schema.json",
             "frameworkVersion": self.index["frameworkVersion"],
             "frameworkCommit": self.commit,
             "frameworkDirty": self.dirty,
@@ -806,7 +817,11 @@ def main(argv=None) -> int:
                       overwrite=args.overwrite_agent_files,
                       reset_seed_files=args.reset_seed_files,
                       execute=args.execute)
-    result = scaf.run(generated_at=args.generated_at)
+    try:
+        result = scaf.run(generated_at=args.generated_at)
+    except (ValueError, OSError) as exc:
+        print(f"scaffold refused: {exc}", file=sys.stderr)
+        return 2
 
     print(f"scaffolded {len(result['manifest']['entries'])} entries into {scaf.aib}")
     for n in cli_notes + result["notes"]:

@@ -54,6 +54,28 @@
         }
       }
     },
+    "sharedScope": {
+      "type": "object",
+      "required": ["mode", "source", "links"],
+      "additionalProperties": false,
+      "properties": {
+        "mode": { "enum": ["inherit", "sync"] },
+        "source": { "type": "string", "minLength": 1 },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["path", "target", "source"],
+            "additionalProperties": false,
+            "properties": {
+              "path": { "type": "string", "minLength": 1 },
+              "target": { "type": "string", "minLength": 1 },
+              "source": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      }
+    },
     "entries": {
       "type": "array",
       "items": {
@@ -61,7 +83,7 @@
         "required": ["feature", "stack", "name", "source", "target", "frameworkVersion", "hash"],
         "additionalProperties": false,
         "properties": {
-          "feature": { "enum": ["skills", "personas", "invariants", "instructions", "templates", "hooks", "adjustments", "mcp"] },
+          "feature": { "enum": ["skills", "personas", "invariants", "instructions", "templates", "hooks", "adjustments", "mcp", "tools"] },
           "stack": { "type": "string" },
           "name": { "type": "string" },
           "source": { "type": "string", "description": "Path within the framework repo." },

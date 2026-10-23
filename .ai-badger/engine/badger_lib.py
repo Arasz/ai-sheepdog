@@ -75,6 +75,10 @@ FEATURE_TYPES: Tuple[FeatureType, ...] = (
     # manifest entry is keyed by an mcp item's name either, for a different reason than the
     # three above (ADR-0014).
     FeatureType("mcp", "mcp", False),
+    # A tool item describes an external CLI; it reaches a project through document slots and
+    # per-harness hook wiring written by each agent's adjust_tools.py, never under its own
+    # name — the same reason as mcp.
+    FeatureType("tools", "tools", False),
 )
 
 FEATURES = [ft.name for ft in FEATURE_TYPES]
@@ -598,6 +602,33 @@ def load_json(path: Path) -> Any:
     """Read and parse a JSON file."""
     with open(path, "r", encoding="utf-8") as fh:
         return json.load(fh)
+
+
+def shared_scope_refusal(target: Path) -> Optional[str]:
+    """Return the command that restores target, when it is an enrolled shared child.
+
+    The command depends on the mode the child was enrolled with: a child that carries
+    the parent's union is restored by `collect` (which re-materializes the union), a
+    child that carries its own stacks by `sync`. Naming `sync` for a union child would
+    quietly shrink it to its local stacks.
+    """
+    profile_path = target / ".ai-badger" / "shared-scope.json"
+    if not profile_path.is_file():
+        return None
+    profile = load_json(profile_path)
+    if not isinstance(profile, dict) or profile.get("mode") not in {"inherit", "sync"}:
+        return None
+    source = (target / profile.get("source", "")).resolve()
+    command = "collect" if profile.get("mode") == "inherit" else "sync"
+    if command == "collect":
+        target_text = source.parent
+        arguments = f"collect --target {target_text}"
+    else:
+        target_text = target
+        arguments = f"sync --target {target} --source {source}"
+    return (f"{target} is a shared-scope child; refresh it with: python3 "
+            f"<framework>/features/common/skills/welcome-ai-badger/scripts/shared_scope.py "
+            f"{arguments}")
 
 
 def _default_new_file_mode() -> int:
